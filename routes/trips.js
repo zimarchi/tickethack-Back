@@ -1,94 +1,49 @@
-    // departure: String,
-	// arrival: Number,
-	// departureDate: Date,
-    // departureTime: Date,
-    // Price: Number,
-
-    //Trip;
-
 var express = require("express");
 var router = express.Router();
 const fetch = require("node-fetch");
-
 const mongoose = require('../models/connection');
-
 const Trip = require('../models/trips');
-
-
-
-
-
-
-// // Import d'une nouvelle ville si n'existe pas
-
-// router.post("/", (req, res) => {
-
-// City.findOne({cityName : {$regex : new RegExp (req.body.cityName, "i")}})
-// .then (foundCity => {
-
-// if (!foundCity) {
-//         fetch(`https://api.openweathermap.org/data/2.5/weather?q=${req.body.cityName}&appid=${OWM_API_KEY}&units=metric`)
-//         //https://api.openweathermap.org/data/2.5/weather?q=Alger&appid=347e166e4d4fc4b77faf8744ec272318&units=metric 
-//             .then(response => response.json())
-//             .then(apiData => {
-//                 const newCity = new City ({
-//                     cityName: apiData.name,
-//                     main: apiData.weather[0].main,
-//                     description: apiData.weather[0].description,
-//                     tempMin: apiData.main.temp_min,
-//                     tempMax: apiData.main.temp_max,
-//                 })
-//                 newCity.save();
-//                 res.json({ result: true, weather: newCity });
-//             });
-// } else {
-//         res.json({ result: false, error: "City already saved" });
-//   }
-// });
-//     })
+const moment = require ("moment");
  
-  
-// //afficher toutes les villes
+//test recherche par date 
 
-//   router.get("/", (req, res) => {
-//     City.find ({}).then (data => res.json ({weather: data}))
-    
-//   });
-  
-// //afficher une seule ville si existe
+router.get("/test", (req, res) => {
+    let date = moment(req.body.date).endOf("day")
+    Trip.find ({
+        date: {$lte: date.toDate()}
+    })
+    .then (tripsResults => res.json ({tripsResults}))
+   });
 
-//   router.get("/:cityName", (req, res) => {
-    
-// City.findOne({cityName : {$regex : new RegExp (req.params.cityName, "i")}})
-// .then (cityFound => {
-//     if (cityFound)
-//     {
-//       res.json({ result: true, weather: cityFound });
-//     } else {
-//       res.json({ result: false, error: "City not found" });
-//     }
-//   });
-// }) 
-  
+//test Afficher tous les voyages
 
-// // supprimer une ville si existe
+router.get("/all", (req, res) => {
+    Trip.find ({})
+    .then (tripsResults => res.json ({tripsResults}))
+});
 
-//   router.delete("/:cityName", (req, res) => {
+//Recherche de voyages
 
-//     City.findOne({cityName : {$regex : new RegExp (req.params.cityName, "i")}})
-//     .then (foundCity => {
-//         if (foundCity) {
-//             City.deleteOne ({cityName: {$regex : new RegExp (req.params.cityName, "i")}})
-//             .then (() => City.find ({}))
-//             .then (data => res.json ({result: true, data: data}))
-            
-//             } else {
-//             City.find ().then (data => res.json ({result: false, error: "City not found"})) 
-              
-//             }
-//     })
+router.get("/", (req, res) => {
+    if (!req.body.departure || !req.body.arrival || !req.body.date ) {
+        return res.json({ result: false, error: 'Missing or empty fields' })
+    }
+    let startDate = moment(req.body.date).startOf("day")
+    let endDate = moment(req.body.date).endOf("day")
+    Trip.find ({
+        departure: { $regex: new RegExp(req.body.departure, 'i')},
+        arrival: { $regex: new RegExp(req.body.arrival, 'i')},
+        //problème de décalage horaire de deux heures !!!!!
+        date: { $gte: startDate.toDate() },
+        date: { $lte: endDate.toDate() },
+    })
+    .then (tripResult => {
+        if (tripResult===[]) {
+            res.json ({result: false, error: 'No trip found'})
+        } else {
+        res.json ({result: true, tripResult})
+        }
+   })
+});
 
- 
-//   });
-
-  module.exports = router;
+  module.exports = router
